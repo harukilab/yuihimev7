@@ -129,7 +129,8 @@ export class NeuralInterface {
       traits: r.traits ? JSON.parse(r.traits) : [],
       trust: r.trust !== undefined ? r.trust : 50,
       affection: r.affection !== undefined ? r.affection : 50,
-      reputation: r.reputation !== undefined ? r.reputation : 50
+      reputation: r.reputation !== undefined ? r.reputation : 50,
+      yuiPerspective: r.yuiPerspective || ""
     }));
 
     // Resolve paired/linked identity if from Telegram
@@ -186,7 +187,8 @@ export class NeuralInterface {
 
     // On-the-fly deduplication alignment and self-healing merge (resolves any case splits/duplications gracefully)
     try {
-      const { deduplicateAndMergeIdentities } = await import("../database.js");
+      const dbModulePath = "../database.js";
+      const { deduplicateAndMergeIdentities } = await import(/* @vite-ignore */ dbModulePath);
       deduplicateAndMergeIdentities(this.db, receiverIdentity.id);
       
       // Reload receiver identity to pick up any merged facts/stats/habits/linkedAccounts
@@ -202,7 +204,8 @@ export class NeuralInterface {
           lastMet: refreshed.lastMet || refreshed.lastInteraction || Date.now(),
           trust: refreshed.trust !== undefined ? refreshed.trust : receiverIdentity.trust,
           affection: refreshed.affection !== undefined ? refreshed.affection : receiverIdentity.affection,
-          reputation: refreshed.reputation !== undefined ? refreshed.reputation : receiverIdentity.reputation
+          reputation: refreshed.reputation !== undefined ? refreshed.reputation : receiverIdentity.reputation,
+          yuiPerspective: refreshed.yuiPerspective || ""
         };
       }
     } catch (mergeErr: any) {

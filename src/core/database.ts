@@ -161,7 +161,8 @@ export function setupSchema(db: any) {
         ownerId TEXT,
         trust INTEGER DEFAULT 50,
         affection INTEGER DEFAULT 50,
-        reputation INTEGER DEFAULT 50
+        reputation INTEGER DEFAULT 50,
+        yuiPerspective TEXT DEFAULT ''
       );
     `,
     cron_tasks: `
@@ -253,7 +254,8 @@ export function setupSchema(db: any) {
         const alterCols = [
           { name: 'trust', type: 'INTEGER DEFAULT 50' },
           { name: 'affection', type: 'INTEGER DEFAULT 50' },
-          { name: 'reputation', type: 'INTEGER DEFAULT 50' }
+          { name: 'reputation', type: 'INTEGER DEFAULT 50' },
+          { name: 'yuiPerspective', type: "TEXT DEFAULT ''" }
         ];
         for (const col of alterCols) {
           if (!columnNames.includes(col.name)) {

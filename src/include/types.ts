@@ -252,6 +252,7 @@ export interface Identity {
   trust?: number;
   affection?: number;
   reputation?: number;
+  yuiPerspective?: string;
 }
 
 /**

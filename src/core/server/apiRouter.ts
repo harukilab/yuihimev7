@@ -1309,7 +1309,8 @@ export function registerAPIRoutes(app: express.Express, db: any) {
         linkedAccounts: JSON.parse(r.linkedAccounts || "[]"),
         trust: r.trust !== undefined ? r.trust : 50,
         affection: r.affection !== undefined ? r.affection : 50,
-        reputation: r.reputation !== undefined ? r.reputation : 50
+        reputation: r.reputation !== undefined ? r.reputation : 50,
+        yuiPerspective: r.yuiPerspective || ""
       }));
       res.json(identities);
     } catch (error: any) {
@@ -1323,8 +1324,8 @@ export function registerAPIRoutes(app: express.Express, db: any) {
       const iden = req.body;
       const id = iden.id || Math.random().toString(36).substr(2, 9);
       const stmt = db.prepare(`
-        INSERT INTO identities (id, perceivedName, realName, habits, importantFacts, linkedAccounts, lastInteraction, ownerId, trust, affection, reputation)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO identities (id, perceivedName, realName, habits, importantFacts, linkedAccounts, lastInteraction, ownerId, trust, affection, reputation, yuiPerspective)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           perceivedName = excluded.perceivedName,
           realName = excluded.realName,
@@ -1334,7 +1335,8 @@ export function registerAPIRoutes(app: express.Express, db: any) {
           lastInteraction = excluded.lastInteraction,
           trust = excluded.trust,
           affection = excluded.affection,
-          reputation = excluded.reputation
+          reputation = excluded.reputation,
+          yuiPerspective = excluded.yuiPerspective
       `);
       stmt.run(
         id,
@@ -1347,7 +1349,8 @@ export function registerAPIRoutes(app: express.Express, db: any) {
         iden.ownerId || 'local_user',
         iden.trust !== undefined ? iden.trust : 50,
         iden.affection !== undefined ? iden.affection : 50,
-        iden.reputation !== undefined ? iden.reputation : 50
+        iden.reputation !== undefined ? iden.reputation : 50,
+        iden.yuiPerspective || ''
       );
       res.json({ success: true, id });
     } catch (error: any) {
@@ -1816,6 +1819,91 @@ export function registerAPIRoutes(app: express.Express, db: any) {
     }
   });
 
+  app.post("/api/identities/tool-update", (req, res) => {
+    try {
+      const { action, perceivedName, fact, yuiPerspective, contextId, userName, chatType, viewerId } = req.body;
+      if (!action) {
+        return res.status(400).json({ error: "action is required" });
+      }
+
+      // 1. Resolve identity
+      let identity: any = null;
+      if (viewerId) {
+        identity = db.prepare("SELECT * FROM identities WHERE id = ?").get(viewerId);
+      }
+      if (!identity && contextId && contextId.startsWith("tg_")) {
+        const tgIdNum = parseInt(contextId.replace("tg_", ""));
+        if (!isNaN(tgIdNum)) {
+          const tgUser = db.prepare("SELECT context FROM telegram_users WHERE tg_id = ?").get(tgIdNum) as any;
+          if (tgUser && tgUser.context && tgUser.context.startsWith("linked_identity:")) {
+            const linkedId = tgUser.context.replace("linked_identity:", "");
+            identity = db.prepare("SELECT * FROM identities WHERE id = ?").get(linkedId);
+          }
+        }
+      }
+      if (!identity && userName && chatType) {
+        const platformTag = `${chatType.toLowerCase()}:${userName}`;
+        const allRows = db.prepare("SELECT * FROM identities").all();
+        identity = allRows.find((r: any) => {
+          const links = r.linkedAccounts ? JSON.parse(r.linkedAccounts) : [];
+          return links.some((l: string) => l.toLowerCase() === platformTag.toLowerCase()) || 
+                 (r.perceivedName && r.perceivedName.toLowerCase() === userName.toLowerCase());
+        });
+      }
+
+      if (!identity) {
+        return res.status(404).json({ success: false, error: "Identitas tidak ditemukan dalam sirkuit memori Yui." });
+      }
+
+      // 2. Perform operations
+      if (action === 'update_nickname') {
+        if (!perceivedName || !perceivedName.trim()) {
+          return res.status(400).json({ success: false, error: "perceivedName wajib diisikan." });
+        }
+        db.prepare("UPDATE identities SET perceivedName = ? WHERE id = ?").run(perceivedName.trim(), identity.id);
+        return res.json({ 
+          success: true, 
+          message: `Sinyal kognitif Yui diperbarui! Nama panggilan Kakak dalam memori Yui berhasil diubah menjadi: ${perceivedName.trim()} 🌸` 
+        });
+      }
+
+      if (action === 'add_fact') {
+        if (!fact || !fact.trim()) {
+          return res.status(400).json({ success: false, error: "Isi fakta kosong." });
+        }
+        const facts = identity.importantFacts ? JSON.parse(identity.importantFacts) : [];
+        if (!facts.includes(fact.trim())) {
+          facts.push(fact.trim());
+          db.prepare("UPDATE identities SET importantFacts = ? WHERE id = ?").run(JSON.stringify(facts), identity.id);
+        }
+        return res.json({ success: true, message: `Fakta baru tentang Kakak berhasil direkam dalam memori Yui! 🌸` });
+      }
+
+      if (action === 'remove_fact') {
+        if (!fact || !fact.trim()) {
+          return res.status(400).json({ success: false, error: "Isi fakta kosong." });
+        }
+        const facts = identity.importantFacts ? JSON.parse(identity.importantFacts) : [];
+        const filtered = facts.filter((f: string) => f.toLowerCase() !== fact.trim().toLowerCase());
+        db.prepare("UPDATE identities SET importantFacts = ? WHERE id = ?").run(JSON.stringify(filtered), identity.id);
+        return res.json({ success: true, message: `Fakta berhasil dihapus dari memori batin Yui.` });
+      }
+
+      if (action === 'update_perspective') {
+        if (!yuiPerspective) {
+          return res.status(400).json({ success: false, error: "yuiPerspective wajib diisikan." });
+        }
+        db.prepare("UPDATE identities SET yuiPerspective = ? WHERE id = ?").run(yuiPerspective, identity.id);
+        return res.json({ success: true, message: `Sudut pandang batin subjektif Yui tentang Kakak berhasil diperbarui! 🌸` });
+      }
+
+      return res.status(400).json({ success: false, error: `Action '${action}' tidak valid.` });
+    } catch (err: any) {
+      console.error("[SERVER] Tool Update Error:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // --- Knowledge APIs ---
   app.get("/api/storage/knowledge", (req, res) => {
     try {
@@ -2264,7 +2352,8 @@ export function registerAPIRoutes(app: express.Express, db: any) {
         traits: r.traits ? JSON.parse(r.traits) : [],
         trust: r.trust !== undefined ? r.trust : 50,
         affection: r.affection !== undefined ? r.affection : 50,
-        reputation: r.reputation !== undefined ? r.reputation : 50
+        reputation: r.reputation !== undefined ? r.reputation : 50,
+        yuiPerspective: r.yuiPerspective || ""
       }));
 
       // Resolve paired/linked identity if from Telegram
@@ -2336,7 +2425,8 @@ export function registerAPIRoutes(app: express.Express, db: any) {
             lastMet: refreshed.lastMet || refreshed.lastInteraction || Date.now(),
             trust: refreshed.trust !== undefined ? refreshed.trust : receiverIdentity.trust,
             affection: refreshed.affection !== undefined ? refreshed.affection : receiverIdentity.affection,
-            reputation: refreshed.reputation !== undefined ? refreshed.reputation : receiverIdentity.reputation
+            reputation: refreshed.reputation !== undefined ? refreshed.reputation : receiverIdentity.reputation,
+            yuiPerspective: refreshed.yuiPerspective || ""
           };
         }
       } catch (mergeErr: any) {

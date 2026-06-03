@@ -494,6 +494,38 @@
     }
   },
   {
+    "id": "search_chat_history",
+    "name": "Search Chat History",
+    "description": "Searches all past conversational chat history and message logs across all connected and paired channels (Web, Telegram, Discord, Live Stream) associated with the current user profile or account to retrieve, recall, or summarize previous discussions.",
+    "version": "1.0.0",
+    "type": "TOOL",
+    "order": 104,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Optional keyword, text phrase, or topic to search for in past messages."
+        },
+        "platform": {
+          "type": "string",
+          "description": "Optional platform filter to limit searches to. Allowed: 'web', 'telegram', 'discord', 'all'. Default is 'all'.",
+          "enum": [
+            "web",
+            "telegram",
+            "discord",
+            "all"
+          ]
+        },
+        "limit": {
+          "type": "number",
+          "description": "Maximum number of past messages to retrieve. Default is 20."
+        }
+      },
+      "required": []
+    }
+  },
+  {
     "id": "shell_exec",
     "name": "Command Line",
     "description": "Execute shell commands on the host system.",
@@ -596,6 +628,36 @@
         "filename",
         "content"
       ]
+    }
+  },
+  {
+    "id": "manage_identities",
+    "name": "Identity & Relationship Manager",
+    "description": "Used by Yui to update the current user's profile details in her memory. Use this dynamically in chats whenever they ask you to call them a different nickname, share a new personal fact, delete a fact, or when you synthesize/update your subjective perspective of them.",
+    "version": "1.0.0",
+    "type": "TOOL",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["update_nickname", "add_fact", "remove_fact", "update_perspective"],
+          "description": "The identity action to execute. 'update_nickname' changes their moniker, 'add_fact' integrates a factual insight, 'remove_fact' discards a fact, and 'update_perspective' edits your subjective viewpoint of them."
+        },
+        "perceivedName": {
+          "type": "string",
+          "description": "The new nickname they want to be called (required for 'update_nickname')"
+        },
+        "fact": {
+          "type": "string",
+          "description": "The fact string to insert or remove (required for 'add_fact' and 'remove_fact')"
+        },
+        "yuiPerspective": {
+          "type": "string",
+          "description": "Your updated subjective/emotional perspective of this user (required for 'update_perspective')"
+        }
+      },
+      "required": ["action"]
     }
   }
 ]

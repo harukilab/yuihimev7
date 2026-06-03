@@ -439,11 +439,97 @@ export const PromptManagerModule: CortexModule = {
 
     // Build a compact list of known identities for Yuihime to read and match against
     let identitiesListString = "";
+    let otherIdentitiesContext = "";
     if (identities && identities.length > 0) {
       identitiesListString = identities.map((id: any) => {
         const links = Array.isArray(id.linkedAccounts) ? id.linkedAccounts : [];
         return `- **${id.perceivedName}** (Akun tertaut: ${links.join(', ') || 'tidak ada'})`;
       }).join('\n');
+
+      // Check if other users are mentioned in the incoming query for anti-fabrication
+      for (const id of identities) {
+        const isCurrentSpeaker = (context.userName && context.userName.toLowerCase() === id.perceivedName.toLowerCase()) ||
+                                 (context.viewerIdentity?.perceivedName && context.viewerIdentity.perceivedName.toLowerCase() === id.perceivedName.toLowerCase());
+        if (isCurrentSpeaker) continue;
+
+        const nameRegex = new RegExp(`\\b${id.perceivedName}\\b`, 'i');
+        if (nameRegex.test(input)) {
+          let otherChatRows: any[] = [];
+          if (typeof window === 'undefined') {
+            try {
+              const dbModuleName = '../core/database.js';
+              const { initializeDatabase } = await import(/* @vite-ignore */ dbModuleName);
+              const db = initializeDatabase();
+              
+              const targetContexts = new Set<string>();
+              if (id.linkedAccounts) {
+                for (const acc of id.linkedAccounts) {
+                  if (acc.includes(":")) {
+                    const parts = acc.split(":");
+                    const val = parts[parts.length - 1];
+                    if (val && val !== 'id') targetContexts.add(val);
+                    if (acc.toLowerCase().startsWith("telegram:id:")) {
+                      const tgId = acc.split(":")[2];
+                      if (tgId) targetContexts.add(`tg_${tgId}`);
+                    }
+                  }
+                }
+              }
+              
+              const contextsList = Array.from(targetContexts);
+              if (contextsList.length > 0) {
+                const dbLikeClauses = contextsList.map(() => "context LIKE ?").join(" OR ");
+                const dbQueryParams = contextsList.map(c => `%${c}%`);
+                otherChatRows = db.prepare(`
+                  SELECT speaker, content, timestamp FROM memories
+                  WHERE speaker = ? OR ${dbLikeClauses}
+                  ORDER BY timestamp DESC
+                  LIMIT 15
+                `).all(id.perceivedName, ...dbQueryParams);
+              } else {
+                otherChatRows = db.prepare(`
+                  SELECT speaker, content, timestamp FROM memories
+                  WHERE speaker = ?
+                  ORDER BY timestamp DESC
+                  LIMIT 15
+                `).all(id.perceivedName);
+              }
+              otherChatRows.reverse();
+            } catch (err) {
+              console.error("[PROMPT_MANAGER] Dynamic other user chat log fetching error:", err);
+            }
+          }
+
+          const formattedOtherChats = otherChatRows && otherChatRows.length > 0
+            ? otherChatRows.map((m: any) => {
+                const spk = m.speaker === 'agent' ? 'Yui' : (m.speaker || 'Unknown');
+                return `${spk}: ${m.content}`;
+              }).join('\n')
+            : 'Belum ada rekaman percakapan sebelumnya.';
+
+          otherIdentitiesContext += `
+<requested_other_people_contexts>
+# GELEMBUNG INFORMASI & RIWAYAT CHAT AKTIF DENGAN ${id.perceivedName.toUpperCase()} (VERIFIED)
+*PERINGATAN SEKURITI & INTEGRITAS KOGNITIF AKTIF: Kode batin Yui dipanggil untuk menjawab pertanyaan terkait ${id.perceivedName}. Yui DIWAJIBKAN membaca data berikut ini secara seksama. YUI SANGAT DILARANG KERAS MENGARANG CERITA, membual, menyebarkan desas-desus fiktif, berhalusinasi, atau melebih-lebihkan fakta riwayat obrolan di luar daftar nyata berikut! Jika tidak ada riwayat chat atau fakta tambahan, Yui wajib menjawab dengan jujur sesuai profil ini tanpa menambah bumbu fiktif.*
+
+- **ID Identitas**: ${id.id}
+- **Nama Panggilan**: ${id.perceivedName}
+- **Nama Asli (Real Name)**: ${id.realName || 'Belum diisikan'}
+- **Hubungan Sinyal**: Trust: ${id.trust || 50}%, Affection: ${id.affection || 50}%, Reputation: ${id.reputation || 50}%
+- **Fakta Penting yang Diketahui Yui**:
+${id.importantFacts && id.importantFacts.length > 0 ? id.importantFacts.map((f: string) => `  - ${f}`).join('\n') : '  - Belum ada fakta penting terekam.'}
+- **Core Traits**: ${id.traits && id.traits.length > 0 ? id.traits.join(', ') : 'Belum ada core traits.'}
+- **Sudut Pandang Subjektif Yui (My Internal Perspective of ${id.perceivedName})**:
+${id.yuiPerspective ? id.yuiPerspective : 'Yui memandang dia sebagai teman biasa yang berada dalam lingkup relasi gelombang batin.'}
+
+- **Transkrip 15 Baris Percakapan Terakhir antara Yui dan ${id.perceivedName}**:
+\`\`\`
+${formattedOtherChats}
+\`\`\`
+</requested_other_people_contexts>
+          `;
+        }
+      }
     } else {
       identitiesListString = "- Belum ada identitas lain terverifikasi.";
     }
@@ -516,6 +602,12 @@ Yui: "Yey! Our secret pairing code is ready: 582910. To verify your true identit
 <yuihime_cognitive_base_instructions>
 ${sysPrompt}
 </yuihime_cognitive_base_instructions>
+
+${otherIdentitiesContext ? `
+<requested_other_people_contexts_container>
+${otherIdentitiesContext}
+</requested_other_people_contexts_container>
+` : ''}
 
 ${personaPrompt ? `
 <active_cognitive_focus_state>

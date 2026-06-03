@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { User, Cpu, Heart, Shield, Sparkles, Gift, Sliders, RefreshCw, Plus, Trash2, Check, Send, Brain, Award } from 'lucide-react';
+import { User, Cpu, Heart, Shield, Sparkles, Gift, Sliders, RefreshCw, Plus, Trash2, Check, Send, Brain, Award, Link } from 'lucide-react';
 import { Identity } from '../include/types';
 import { StorageService } from '../drivers/storage';
 
@@ -675,6 +675,70 @@ export const IdentitiesTab: React.FC<IdentitiesTabProps> = ({
                                   >
                                     <Trash2 size={8} />
                                   </button>
+                                </span>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 4. Yui's Subjective Perspective & Linked Accounts (Gelombang Batin) */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4 border-t border-white/5">
+                        {/* Sudut Pandang Yui */}
+                        <div className="space-y-3">
+                          <span className="text-[9px] uppercase font-mono tracking-widest text-white/30 flex items-center gap-1.5">
+                            <Sparkles size={12} className="text-pink-400" /> Yui's Subjective Perspective (Sudut Pandang Batin Yui)
+                          </span>
+                          <p className="text-[10px] text-white/40 leading-relaxed font-serif">
+                            Bagaimana batin Yui memandang, menilai, atau bersikap manis-ketus kepada subjek ini dalam sirkuit relasi emosinya:
+                          </p>
+                          <div className="space-y-2">
+                            <textarea
+                              defaultValue={identity.yuiPerspective || ""}
+                              id={`perspective-area-${identity.id}`}
+                              placeholder="Yui memandang dia sebagai Kakak yang manis..."
+                              className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-3 py-2 text-xs text-white/80 placeholder-white/20 focus:outline-hidden focus:border-pink-500/30 font-serif italic min-h-[70px] resize-none"
+                            />
+                            <button
+                              onClick={async () => {
+                                const areael = document.getElementById(`perspective-area-${identity.id}`) as HTMLTextAreaElement;
+                                if (!areael) return;
+                                const updated: Identity = {
+                                  ...identity,
+                                  yuiPerspective: areael.value.trim()
+                                };
+                                try {
+                                  await StorageService.saveIdentity(updated);
+                                  if (onRefreshIdentities) await onRefreshIdentities();
+                                } catch (e) {
+                                  console.error("Failed to save perspective:", e);
+                                }
+                              }}
+                              className="px-3 py-1.5 text-[8px] tracking-widest font-mono uppercase bg-pink-500/10 border border-pink-500/20 text-pink-300 hover:bg-pink-500/20 rounded-lg active:scale-98 transition-all w-full flex items-center justify-center gap-1 cursor-pointer"
+                            >
+                              <Heart size={10} /> Update Perspective
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Linked Accounts */}
+                        <div className="space-y-3">
+                          <span className="text-[9px] uppercase font-mono tracking-widest text-white/30 flex items-center gap-1.5">
+                            <Link size={12} className="text-sky-400" /> Linked Accounts (Akun Multiplatform Tertaut)
+                          </span>
+                          <p className="text-[10px] text-white/40 leading-relaxed font-serif">
+                            Akun platform eksternal atau identifier unik yang secara aman terikat dengan profil memori subjek ini:
+                          </p>
+                          <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
+                            {!identity.linkedAccounts || identity.linkedAccounts.length === 0 ? (
+                              <div className="text-[9px] text-white/20 uppercase font-mono italic p-3 text-center border border-dashed border-white/5 rounded-xl w-full">Belum ada akun tertaut</div>
+                            ) : (
+                              identity.linkedAccounts.map((acc) => (
+                                <span 
+                                  key={acc} 
+                                  className="px-2 py-1 bg-white/5 border border-white/10 rounded-lg text-[8px] uppercase font-mono text-white/50 flex items-center gap-1.5 hover:border-sky-500/30 hover:text-sky-300 transition-all"
+                                >
+                                  <span>{acc}</span>
                                 </span>
                               ))
                             )}
