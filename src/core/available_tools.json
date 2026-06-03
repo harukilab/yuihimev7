@@ -1,0 +1,601 @@
+[
+  {
+    "id": "code_interpreter",
+    "name": "Neural Code Execution",
+    "description": "Executes JavaScript or Python code snippets to solve problems.",
+    "version": "1.0.0",
+    "type": "TOOL",
+    "order": 11,
+    "configSchema": {
+      "fields": {
+        "executionSandbox": {
+          "type": "select",
+          "label": "Neural Sandbox Mode",
+          "default": "local",
+          "options": [
+            {
+              "label": "Local (Fast, Unsafe)",
+              "value": "local"
+            },
+            {
+              "label": "Docker (Secure, Isolated)",
+              "value": "docker"
+            },
+            {
+              "label": "Lambda (Serverless)",
+              "value": "lambda"
+            }
+          ]
+        },
+        "timeoutMs": {
+          "type": "number",
+          "label": "Execution Timeout (ms)",
+          "default": 5000
+        }
+      }
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "language": {
+          "type": "string",
+          "description": "Programming language (javascript/python)"
+        },
+        "code": {
+          "type": "string",
+          "description": "The code to execute"
+        }
+      },
+      "required": [
+        "language",
+        "code"
+      ]
+    }
+  },
+  {
+    "id": "emotion.adjust",
+    "name": "Emotion Adjustment Tool",
+    "description": "Adjust the assistant's current emotion state (arousal, valence, focus, rapport).",
+    "version": "0.4.0",
+    "type": "TOOL",
+    "order": 0,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "arousal": {
+          "type": "number",
+          "description": "Adjustment to arousal (intensity)."
+        },
+        "valence": {
+          "type": "number",
+          "description": "Adjustment to valence (positivity/negativity)."
+        },
+        "focus": {
+          "type": "number",
+          "description": "Adjustment to focus (concentration)."
+        },
+        "rapport": {
+          "type": "number",
+          "description": "Adjustment to rapport (connection with user)."
+        }
+      }
+    }
+  },
+  {
+    "id": "file_manipulate",
+    "name": "Automatic File Manipulation Hub",
+    "description": "Manages sandbox files: sorts by type/date, creates zip archives, generates smart text summaries using Gemini, and converts formats.",
+    "version": "1.0.0",
+    "type": "TOOL",
+    "order": 15,
+    "configSchema": {
+      "fields": {
+        "defaultArchiveName": {
+          "type": "input",
+          "label": "Default Archive Name",
+          "description": "Default name used when zipping files",
+          "default": "archive_sync"
+        },
+        "summaryInstruction": {
+          "type": "textarea",
+          "label": "Summary Extraction Context",
+          "description": "Custom tuning prompt for summarizing text documents",
+          "default": "Buatlah ringkasan kognitif yang padat, informatif, dan terstruktur rapi dari dokumen berikut dalam bahasa Indonesia yang anggun:"
+        }
+      }
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "description": "Action to execute: \"sort\", \"archive\", \"summarize\", or \"convert\"",
+          "enum": [
+            "sort",
+            "archive",
+            "summarize",
+            "convert"
+          ]
+        },
+        "target": {
+          "type": "string",
+          "description": "The target file name or directory name inside the sandbox (e.g. \"report.csv\" or \".\")"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of files to process (required for \"archive\" action)"
+        },
+        "archiveName": {
+          "type": "string",
+          "description": "Output name for the zip/tar archive (e.g. \"my_backup.zip\")"
+        },
+        "sortBy": {
+          "type": "string",
+          "description": "Sorting criteria: \"type\" (move to folders documents/images/code), \"size\", \"date\", or \"name\"",
+          "enum": [
+            "type",
+            "size",
+            "date",
+            "name"
+          ]
+        },
+        "targetFormat": {
+          "type": "string",
+          "description": "The format to convert the target file to: \"json\", \"toml\", \"markdown\" (e.g. transform CSV to JSON, or JSON to TOML)"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    }
+  },
+  {
+    "id": "github_integration",
+    "name": "GitHub Navigator",
+    "description": "Interface with GitHub to search repositories, list issues, and fetch code metadata.",
+    "version": "1.0.0",
+    "type": "TOOL",
+    "order": 200,
+    "configSchema": {
+      "fields": {
+        "githubToken": {
+          "type": "password",
+          "label": "GitHub Personal Access Token",
+          "description": "Used for authenticated requests to avoid rate limits",
+          "default": ""
+        },
+        "defaultOwner": {
+          "type": "string",
+          "label": "Default Repository Owner",
+          "description": "Fallback owner if not specified in query",
+          "default": ""
+        }
+      }
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "search_repos",
+            "list_issues",
+            "get_repo_details",
+            "list_pull_requests"
+          ],
+          "description": "The GitHub action to perform"
+        },
+        "query": {
+          "type": "string",
+          "description": "Search query or repository name (e.g., 'owner/repo')"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "open",
+            "closed",
+            "all"
+          ],
+          "description": "Filter for issues/PRs"
+        }
+      },
+      "required": [
+        "action",
+        "query"
+      ]
+    }
+  },
+  {
+    "id": "list_files",
+    "name": "List Files",
+    "description": "List all files available in user_data.",
+    "version": "1.0.0",
+    "type": "TOOL",
+    "order": 103,
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "id": "lua_interpreter",
+    "name": "Neural Lua Engine",
+    "description": "Executes Lua code snippets for specialized game logic or integrations.",
+    "version": "1.0.0",
+    "type": "TOOL",
+    "order": 12,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "The Lua code to execute"
+        }
+      },
+      "required": [
+        "code"
+      ]
+    }
+  },
+  {
+    "id": "manage_cron",
+    "name": "Cron Scheduler",
+    "description": "Schedule, list, and manage recurring tasks (cron jobs) in the system. Use this to create reminders or automated background checks.",
+    "version": "1.0.0",
+    "type": "TOOL",
+    "order": 105,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "list",
+            "add",
+            "edit",
+            "toggle",
+            "delete"
+          ],
+          "description": "Action to perform on the cron system"
+        },
+        "taskName": {
+          "type": "string",
+          "description": "Name of the task"
+        },
+        "schedule": {
+          "type": "string",
+          "description": "Schedule string (e.g., '1m' for every minute, '1h' for every hour, or a standard cron expression like '0 * * * *')"
+        },
+        "taskId": {
+          "type": "string",
+          "description": "ID of the task to modify or delete"
+        },
+        "repeating": {
+          "type": "boolean",
+          "description": "Whether the task should repeat or be deleted after one-time execution"
+        },
+        "targetChannel": {
+          "type": "string",
+          "description": "Optional fallback chat channel. Use 'Telegram (Private)' if the user requested the output destination to be Telegram."
+        }
+      },
+      "required": [
+        "action"
+      ]
+    }
+  },
+  {
+    "id": "manage_pairing",
+    "name": "Secured Persona Pairing Manager",
+    "description": "Used ONLY when an external chat client (Telegram, Discord, etc.) wants to claim an identity from the Web app (e.g., claiming to be 'Aldi'). Under the hood, this generates a secure 6-digit random code that the user MUST enter in their Web console to complete the link securely.",
+    "type": "TOOL",
+    "version": "1.0.0",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "generate_code_for_user"
+          ],
+          "description": "The pairing operation to perform. 'generate_code_for_user' creates a 10-minute temporary claim code."
+        },
+        "claimedName": {
+          "type": "string",
+          "description": "The name of the Web identity/friend profile the external user claims to be (e.g. 'Aldi')"
+        }
+      },
+      "required": [
+        "action",
+        "claimedName"
+      ]
+    }
+  },
+  {
+    "id": "messaging_integration",
+    "name": "Universal Dispatcher",
+    "description": "Send alerts or cross-platform messages to Telegram or other connected platforms like Discord, Slack, and Webhooks.",
+    "version": "1.1.0",
+    "type": "TOOL",
+    "order": 201,
+    "configSchema": {
+      "fields": {
+        "discordWebhookUrl": {
+          "type": "password",
+          "label": "Discord Webhook URL",
+          "default": ""
+        },
+        "slackBotToken": {
+          "type": "password",
+          "label": "Slack Bot Token",
+          "default": ""
+        }
+      }
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "platform": {
+          "type": "string",
+          "enum": [
+            "discord",
+            "slack",
+            "webhook",
+            "telegram"
+          ],
+          "description": "Target platform"
+        },
+        "message": {
+          "type": "string",
+          "description": "Content of the message to send"
+        },
+        "recipient": {
+          "type": "string",
+          "description": "The Telegram username (e.g. 'zeropride'), perceived name, real name, or raw chat ID. If empty and platform is telegram, Yui will automatically look up the active talker's linked Telegram profile in her social memory/identities database."
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "low",
+            "normal",
+            "high"
+          ],
+          "description": "Urgency level"
+        }
+      },
+      "required": [
+        "platform",
+        "message"
+      ]
+    }
+  },
+  {
+    "id": "overlay_control",
+    "name": "Neural Overlay System",
+    "description": "Controls the broadcast overlay, toggling UI elements and visual effects.",
+    "version": "1.0.0",
+    "type": "TOOL",
+    "order": 20,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "element": {
+          "type": "string",
+          "enum": [
+            "matrix",
+            "graph",
+            "chat",
+            "all"
+          ],
+          "description": "The UI element to toggle"
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "show",
+            "hide",
+            "toggle"
+          ],
+          "description": "The action to perform"
+        },
+        "message": {
+          "type": "string",
+          "description": "Optional status message to display on the overlay"
+        }
+      },
+      "required": [
+        "element",
+        "action"
+      ]
+    }
+  },
+  {
+    "id": "plugin-installer",
+    "name": "Neural Addon Installer",
+    "description": "Installs or updates a system plugin/addon by writing its configuration and entry point.",
+    "version": "1.0.0",
+    "type": "TOOL",
+    "order": 0,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the addon (dash-separated)"
+        },
+        "config": {
+          "type": "string",
+          "description": "TOML configuration content"
+        },
+        "code": {
+          "type": "string",
+          "description": "Main entry point code content"
+        },
+        "runtime": {
+          "type": "string",
+          "description": "Runtime environment",
+          "enum": [
+            "node",
+            "python",
+            "bash"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "config",
+        "code",
+        "runtime"
+      ]
+    }
+  },
+  {
+    "id": "python_interpreter",
+    "name": "Neural Python Core",
+    "description": "Executes Python code for data analysis and complex math.",
+    "version": "1.0.0",
+    "type": "TOOL",
+    "order": 13,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "The Python code to execute"
+        }
+      },
+      "required": [
+        "code"
+      ]
+    }
+  },
+  {
+    "id": "read_file",
+    "name": "Read File",
+    "description": "Read content from a file in user_data.",
+    "version": "1.0.0",
+    "type": "TOOL",
+    "order": 102,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "filename": {
+          "type": "string",
+          "description": "Name of the file"
+        }
+      },
+      "required": [
+        "filename"
+      ]
+    }
+  },
+  {
+    "id": "shell_exec",
+    "name": "Command Line",
+    "description": "Execute shell commands on the host system.",
+    "version": "1.0.0",
+    "type": "TOOL",
+    "order": 100,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string",
+          "description": "The command to execute"
+        }
+      },
+      "required": [
+        "command"
+      ]
+    }
+  },
+  {
+    "id": "web_search",
+    "name": "Neural Web Search",
+    "description": "Searches the internet for real-time information.",
+    "version": "1.0.0",
+    "type": "TOOL",
+    "order": 10,
+    "configSchema": {
+      "fields": {
+        "serperApiKey": {
+          "type": "password",
+          "label": "Serper API Key",
+          "description": "Needed for real-time search extraction",
+          "default": ""
+        },
+        "searchProvider": {
+          "type": "select",
+          "label": "Search Provider",
+          "default": "google",
+          "options": [
+            {
+              "label": "Google (Serper)",
+              "value": "google"
+            },
+            {
+              "label": "Bing",
+              "value": "bing"
+            },
+            {
+              "label": "DuckDuckGo",
+              "value": "duckduckgo"
+            }
+          ]
+        },
+        "maxResults": {
+          "type": "number",
+          "label": "Max Results",
+          "default": 5
+        },
+        "usageGuidelines": {
+          "type": "textarea",
+          "label": "Search Context Prompt",
+          "description": "Special instructions for the search engine",
+          "default": "Extract concise, factual information relevant to the user query."
+        }
+      }
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Search query"
+        }
+      },
+      "required": [
+        "query"
+      ]
+    }
+  },
+  {
+    "id": "write_file",
+    "name": "Write File",
+    "description": "Write content to a file in user_data.",
+    "version": "1.0.0",
+    "type": "TOOL",
+    "order": 101,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "filename": {
+          "type": "string",
+          "description": "Name of the file"
+        },
+        "content": {
+          "type": "string",
+          "description": "Text content to write"
+        }
+      },
+      "required": [
+        "filename",
+        "content"
+      ]
+    }
+  }
+]
