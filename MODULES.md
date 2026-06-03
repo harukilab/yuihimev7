@@ -7,6 +7,12 @@ Dokumen ini memuat daftar lengkap dari seluruh modul kognitif, *add-ons*, jembat
 ## ⏳ Sejarah Pembaruan Modul
 *Dokumen ini wajib diperbarui setiap kali terjadi pembuatan, pemindahan, atau modifikasi fungsionalitas modul.*
 
+- **2026-06-03 (Turn 283 (v7.26))**: Multi-Channel Identity Matcher Protection & Self-Healing Case Merging:
+  - **Auto-Paired Telegram ID Lookup (`NeuralInterface.ts` & `apiRouter.ts`)**: Enabled accurate, string-independent user lookup by mapping private Telegram messages directly to their associated identity context in `telegram_users`.
+  - **Case-Insensitive Resolution Matcher (`NeuralInterface.ts` & `apiRouter.ts`)**: Solved duplicate profile triggers by evaluating matching accounts and perceived names case-insensitively during incoming platform message ingestion.
+  - **Upsert Safeguard for Telegram Users (`telegram.ts`)**: Swapped destructive `INSERT OR REPLACE` with atomic SQLite UPSERT queries (`ON CONFLICT(tg_id) DO UPDATE SET`) to secure the paired `context` columns against unexpected overwrites.
+  - **Case-Insensitive Deduplication Merge (`database.ts`)**: Upgraded `deduplicateAndMergeIdentities` to coalesce separate user profiles sharing case-varying perceived names (e.g., "aldi" vs "Aldi") dynamically, consolidating relational bounds.
+
 - **2026-06-02 (Turn 276 (v7.19))**: Dedicated Audit Log Tab, Schema Validation Middleware & Global Rigid Prompts:
   - **Validation Middleware Integration (`ValidationMiddleware` in `cortex.ts`)**: Embedded strict check on incoming model raw strings using `ValidationMiddleware` to log any parsing and validation issues under `[SCHEMA_ERROR]`.
   - **Unified Output Sanitizer (`APIService.cleanAIOutput` in `api.ts`)**: Replaced deprecated local `stripMarkdownArtifacts` in `Cortex` with global, unified API helper `cleanAIOutput`.

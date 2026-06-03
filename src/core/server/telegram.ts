@@ -289,9 +289,14 @@ export async function initializeBot(activeDb?: any, force = false, dropPending =
               }
             });
           }
-          // Update last seen
-          db.prepare("INSERT OR REPLACE INTO telegram_users (tg_id, username, last_seen) VALUES (?, ?, ?)")
-            .run(tgUserId, ctx.from.username || senderName, Date.now());
+          // Update last seen (use UPSERT to preserve pairing context mapping from being overwritten to NULL on incoming messages)
+          db.prepare(`
+            INSERT INTO telegram_users (tg_id, username, last_seen)
+            VALUES (?, ?, ?)
+            ON CONFLICT(tg_id) DO UPDATE SET
+              username = excluded.username,
+              last_seen = excluded.last_seen
+          `).run(tgUserId, ctx.from.username || senderName, Date.now());
         },
         async (err) => {
           console.error("[TELEGRAM_QUEUE] Gagal memproses pesan:", err);

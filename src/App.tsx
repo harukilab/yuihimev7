@@ -396,12 +396,19 @@ export default function App() {
         }));
       }
     };
+    const handleForceUnlock = () => {
+      setIsThinking(false);
+      setState(prev => ({ ...prev, status: 'idle' }));
+      console.warn("[SYSTEM] Cognition forced open via user escape trigger.");
+    };
     window.addEventListener('cognition_purged', handleCognitionPurged);
+    window.addEventListener('force_unlock_thinking', handleForceUnlock);
     
     return () => {
       window.removeEventListener('resize', setVh);
       window.removeEventListener('orientationchange', setVh);
       window.removeEventListener('cognition_purged', handleCognitionPurged);
+      window.removeEventListener('force_unlock_thinking', handleForceUnlock);
     };
   }, []);
 
@@ -1487,7 +1494,10 @@ export default function App() {
 
   const handleThink = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!input.trim() || isThinking) return;
+    if (!input.trim()) return;
+
+    const isSystemCommand = input.trim().startsWith('/');
+    if (isThinking && !isSystemCommand) return;
 
     if (input.trim() === '/reset_cognition') {
       setInput('');
@@ -2169,6 +2179,7 @@ export default function App() {
                 state={state}
                 // Newly integrated parameters
                 memories={memories}
+                setMemories={setMemories}
                 dreams={dreams}
                 knowledge={knowledge}
                 metricsHistory={metricsHistory}

@@ -118,7 +118,7 @@ export const LiveChatFeed: React.FC<LiveChatFeedProps> = ({
             <motion.div
               initial={{ opacity: 0, y: 10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              className="p-2.5 px-3.5 bg-gradient-to-r from-[#25101f]/95 to-[#1c1124]/95 border border-pink-500/20 rounded-2xl rounded-bl-none self-start flex items-center gap-2.5 backdrop-blur-md shadow-md shadow-pink-500/5 text-left animate-pulse"
+              className="p-2.5 px-3.5 bg-gradient-to-r from-[#25101f]/95 to-[#1c1124]/95 border border-pink-500/20 rounded-2xl rounded-bl-none self-start flex items-center gap-2.5 backdrop-blur-md shadow-md shadow-pink-500/5 text-left"
             >
               <div className="flex space-x-1.5 items-center">
                 <span className="w-1.5 h-1.5 bg-pink-400 rounded-full animate-ping" />
@@ -128,6 +128,16 @@ export const LiveChatFeed: React.FC<LiveChatFeedProps> = ({
               <span className="text-[8.5px] font-mono uppercase tracking-widest text-[#f472b6] font-extrabold flex items-center gap-1">
                 🌸 YUIHIME SEDANG MERENUNG...
               </span>
+              <button 
+                type="button"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('force_unlock_thinking'));
+                }}
+                className="ml-2 px-1.5 py-0.5 rounded bg-pink-500/20 hover:bg-pink-500/40 border border-pink-500/30 text-[8px] font-mono uppercase tracking-wider text-pink-300 hover:text-white transition-all cursor-pointer font-bold"
+                title="Force unlock input if server/API is lagging or stuck"
+              >
+                Force Stop
+              </button>
             </motion.div>
           )}
         </div>
@@ -140,7 +150,6 @@ export const LiveChatFeed: React.FC<LiveChatFeedProps> = ({
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            disabled={isThinking}
             placeholder={isThinking ? "Yuihime sedang merenung..." : "Say something..."}
             className="w-full pl-6 pr-6 py-3 bg-[#0e0e14]/75 backdrop-blur-xl border border-white/5 rounded-full text-xs text-white/90 placeholder-white/30 focus:outline-none focus:border-pink-500/30 focus:shadow-[0_0_20px_rgba(236,72,153,0.15)] transition-all"
           />

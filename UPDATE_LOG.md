@@ -4,6 +4,21 @@ Semua perubahan kode, sistem, modul, dan konfigurasi yang dilakukan oleh agen (A
 
 ---
 
+## [2026-06-03 - Turn 283 - v7.26]
+
+### Multi-Channel Identity Matching & Case-Insensitive Self-Healing Merges
+- **Telegram Context Mapping Safeguard (`telegram.ts`)**: Upgraded the `telegram_users` last_seen updater to use standard SQLite UPSERT (`ON CONFLICT(tg_id) DO UPDATE SET`) instead of destructive `INSERT OR REPLACE` which would drop/wipe out the `context` column (containing the connection to the paired `identity.id`) to NULL, causing active users to lose their paired profiles on sending new Telegram messages.
+- **Dynamic Paired ID & Case-Insensitive Resolution (`NeuralInterface.ts`, `apiRouter.ts`)**: Enhanced platform identity retrieval to resolve Telegram operators directly via their stored paired identity IDs, and added case-insensitive matching across platform tags and perceived names to prevent casing differences (e.g., "aldi" vs "Aldi") from creating split duplicate profiles with zero-out relations.
+- **On-the-Fly Self-Healing Deduplication Merge (`NeuralInterface.ts`, `apiRouter.ts`, `database.ts`)**: Enabled automated on-the-fly execution of `deduplicateAndMergeIdentities` during each message inbound transaction. Upgraded the underlying databases merge engine to coalesce profiles based on case-insensitive names, merging and preserving overlapping relational metrics (trust, affection, reputation) dynamically.
+
+## [2026-06-03 - Turn 282 - v7.25]
+
+### Bulk Memory Deletion Sync & Web UI Chat Lock Escalation Hatch
+- **Bulk Memory State Synchronization (`App.tsx`, `ModularSettings.tsx`, `PersistenceTab.tsx`)**: Passed `setMemories` and `activeSessionId` downstream through the App state managers to the Settings panel and PersistenceTab. This ensures any bulk deletes, session purges, and category deletions immediately reflect on the local UI state without needing manual page reloads.
+- **Cognitive Thinking Lock Escape Hatch (`App.tsx`, `LiveChatFeed.tsx`)**: Resolved the critical bug where the input chat panel gets permanently disabled ("Yuihime sedang merenung...") due to stuck network responses, backend engine lag, or API rate limits.
+  - Added a visual **Force Stop** button next to the thinking animation bubble, dispatching a custom `'force_unlock_thinking'` event to immediately restore Yui's status to `'idle'`.
+  - Configured `handleThink` entry validation to always allow typing, entering, and parsing slash commands (e.g., `/reset_cognition`, `/dream`) even when the system is in thinking mode.
+
 ## [2026-06-03 - Turn 281 - v7.24]
 
 ### Memory Scaffold & Additional Inner-Data Alignment (Airi/OpenClaw Residual Purge)

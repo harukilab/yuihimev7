@@ -177,6 +177,26 @@ export class StorageService {
     }
   }
 
+  static async deleteMemories(params: { context?: string; type?: string; id?: string; ids?: string[] }): Promise<{ success: boolean; deletedCount: number }> {
+    try {
+      const queryParts: string[] = [];
+      if (params.context) queryParts.push(`context=${encodeURIComponent(params.context)}`);
+      if (params.type) queryParts.push(`type=${encodeURIComponent(params.type)}`);
+      if (params.id) queryParts.push(`id=${encodeURIComponent(params.id)}`);
+      if (params.ids && params.ids.length > 0) queryParts.push(`ids=${encodeURIComponent(params.ids.join(','))}`);
+      
+      const queryString = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+      const res = await this.fetchWithRetry(`/api/storage/memories${queryString}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await this.safeJson<any>(res) || { success: false, deletedCount: 0 };
+    } catch (e: any) {
+      console.error("Failed to delete memories:", e);
+      return { success: false, deletedCount: 0 };
+    }
+  }
+
   static async getIdentities(): Promise<Identity[]> {
     try {
       const res = await this.fetchWithRetry('/api/storage/identities');

@@ -556,15 +556,51 @@ export function registerAPIRoutes(app: express.Express, db: any) {
   app.delete("/api/storage/memories", (req, res) => {
     try {
       const context = req.query.context as string;
-      if (!context) {
-        return res.status(400).json({ error: "Context query parameter is required" });
+      const type = req.query.type as string;
+      const id = req.query.id as string;
+      const ids = req.query.ids as string;
+
+      let info;
+
+      if (id) {
+        const stmt = db.prepare("DELETE FROM memories WHERE id = ?");
+        info = stmt.run(id);
+      } else if (ids) {
+        const idList = ids.split(',').filter(x => x.trim().length > 0);
+        if (idList.length > 0) {
+          const placeholders = idList.map(() => '?').join(',');
+          const stmt = db.prepare(`DELETE FROM memories WHERE id IN (${placeholders})`);
+          info = stmt.run(...idList);
+        }
+      } else if (context) {
+        if (context === "cron_trigger") {
+          return res.status(403).json({ error: "Cannot delete system cron history" });
+        }
+        
+        let stmt;
+        if (type) {
+          if (context.includes('%')) {
+            stmt = db.prepare("DELETE FROM memories WHERE context LIKE ? AND type = ?");
+          } else {
+            stmt = db.prepare("DELETE FROM memories WHERE context = ? AND type = ?");
+          }
+          info = stmt.run(context, type);
+        } else {
+          if (context.includes('%')) {
+            stmt = db.prepare("DELETE FROM memories WHERE context LIKE ?");
+          } else {
+            stmt = db.prepare("DELETE FROM memories WHERE context = ?");
+          }
+          info = stmt.run(context);
+        }
+      } else if (type) {
+        const stmt = db.prepare("DELETE FROM memories WHERE type = ?");
+        info = stmt.run(type);
+      } else {
+        return res.status(400).json({ error: "At least one target criteria is required" });
       }
-      if (context === "cron_trigger") {
-        return res.status(403).json({ error: "Cannot delete system cron history" });
-      }
-      const stmt = db.prepare("DELETE FROM memories WHERE context = ?");
-      const info = stmt.run(context);
-      res.json({ success: true, deletedCount: info.changes, context });
+
+      res.json({ success: true, deletedCount: info ? info.changes : 0, context, type });
     } catch (error: any) {
       console.error("[SERVER] DELETE memories Error:", error);
       res.status(500).json({ error: error.message });
@@ -2231,10 +2267,29 @@ export function registerAPIRoutes(app: express.Express, db: any) {
         reputation: r.reputation !== undefined ? r.reputation : 50
       }));
 
+      // Resolve paired/linked identity if from Telegram
+      let pairedIdentityId: string | null = null;
+      if (finalContextId && finalContextId.startsWith("tg_")) {
+        const tgIdStr = finalContextId.replace("tg_", "");
+        const tgIdNum = parseInt(tgIdStr);
+        if (!isNaN(tgIdNum)) {
+          try {
+            const tgUser = db.prepare("SELECT context FROM telegram_users WHERE tg_id = ?").get(tgIdNum) as any;
+            if (tgUser && tgUser.context && tgUser.context.startsWith("linked_identity:")) {
+              pairedIdentityId = tgUser.context.replace("linked_identity:", "");
+            }
+          } catch (err) {
+            console.error("[CORTEX_THINK_USER_MATCH_RESOLVE] Error querying telegram_users:", err);
+          }
+        }
+      }
+
       // Resolve user's identity
       const platformTag = `${finalChatType.toLowerCase()}:${senderName}`;
       let receiverIdentity = allIdentities.find((id: any) => 
-        id.linkedAccounts.includes(platformTag) || id.perceivedName === senderName
+        (pairedIdentityId && id.id === pairedIdentityId) ||
+        (id.linkedAccounts && id.linkedAccounts.some((acc: string) => acc.toLowerCase() === platformTag.toLowerCase())) || 
+        (id.perceivedName && id.perceivedName.toLowerCase() === senderName.toLowerCase())
       );
 
       if (!receiverIdentity) {
@@ -2261,6 +2316,31 @@ export function registerAPIRoutes(app: express.Express, db: any) {
         allIdentities.push(receiverIdentity);
       } else {
         db.prepare("UPDATE identities SET lastInteraction = ? WHERE id = ?").run(Date.now(), receiverIdentity.id);
+      }
+
+      // On-the-fly deduplication alignment and self-healing merge (resolves any case splits/duplications gracefully)
+      try {
+        const { deduplicateAndMergeIdentities } = await import("../database.js");
+        deduplicateAndMergeIdentities(db, receiverIdentity.id);
+        
+        // Reload receiver identity to pick up any merged facts/stats/habits/linkedAccounts
+        const refreshed = db.prepare("SELECT * FROM identities WHERE id = ?").get(receiverIdentity.id) as any;
+        if (refreshed) {
+          receiverIdentity = {
+            ...receiverIdentity,
+            perceivedName: refreshed.perceivedName,
+            realName: refreshed.realName,
+            habits: refreshed.habits ? JSON.parse(refreshed.habits) : [],
+            importantFacts: refreshed.importantFacts ? JSON.parse(refreshed.importantFacts) : [],
+            linkedAccounts: refreshed.linkedAccounts ? JSON.parse(refreshed.linkedAccounts) : [],
+            lastMet: refreshed.lastMet || refreshed.lastInteraction || Date.now(),
+            trust: refreshed.trust !== undefined ? refreshed.trust : receiverIdentity.trust,
+            affection: refreshed.affection !== undefined ? refreshed.affection : receiverIdentity.affection,
+            reputation: refreshed.reputation !== undefined ? refreshed.reputation : receiverIdentity.reputation
+          };
+        }
+      } catch (mergeErr: any) {
+        console.warn("[CORTEX_THINK_MERGE] Self-healing merge warn:", mergeErr.message);
       }
 
       const { DEFAULT_NEURAL_CORES } = await import("../../constants.js");

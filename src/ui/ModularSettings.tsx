@@ -68,6 +68,7 @@ interface ModularSettingsProps {
   state?: any;
   // Integrated parameters from other tabs
   memories?: any[];
+  setMemories?: React.Dispatch<React.SetStateAction<any[]>>;
   dreams?: any[];
   knowledge?: any[];
   memorySearchQuery?: string;
@@ -190,6 +191,7 @@ export const ModularSettings: React.FC<ModularSettingsProps> = ({
   onSave,
   state,
   memories = [],
+  setMemories,
   dreams = [],
   knowledge = [],
   memorySearchQuery = '',
@@ -3690,6 +3692,8 @@ export const ModularSettings: React.FC<ModularSettingsProps> = ({
                   {activeSoulTab === 'persistence' && (
                     <PersistenceTab 
                       memories={memories}
+                      setMemories={setMemories}
+                      activeSessionId={activeSessionId}
                       dreams={dreams}
                       knowledge={knowledge}
                       identities={identities}

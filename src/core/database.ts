@@ -437,7 +437,12 @@ export function deduplicateAndMergeIdentities(db: any, targetIdentityId: string)
         }
       }
 
-      if (hasOverlappingAccount) {
+      const isCaseInsensitiveNameMatch = 
+        main.perceivedName && 
+        iden.perceivedName && 
+        main.perceivedName.trim().toLowerCase() === iden.perceivedName.trim().toLowerCase();
+
+      if (hasOverlappingAccount || isCaseInsensitiveNameMatch) {
         let idenAccounts: string[] = [];
         try {
           idenAccounts = iden.linkedAccounts ? JSON.parse(iden.linkedAccounts) : [];

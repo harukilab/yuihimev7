@@ -132,10 +132,29 @@ export class NeuralInterface {
       reputation: r.reputation !== undefined ? r.reputation : 50
     }));
 
+    // Resolve paired/linked identity if from Telegram
+    let pairedIdentityId: string | null = null;
+    if (contextId && contextId.startsWith("tg_")) {
+      const tgIdStr = contextId.replace("tg_", "");
+      const tgIdNum = parseInt(tgIdStr);
+      if (!isNaN(tgIdNum)) {
+        try {
+          const tgUser = this.db.prepare("SELECT context FROM telegram_users WHERE tg_id = ?").get(tgIdNum) as any;
+          if (tgUser && tgUser.context && tgUser.context.startsWith("linked_identity:")) {
+            pairedIdentityId = tgUser.context.replace("linked_identity:", "");
+          }
+        } catch (err) {
+          console.error("[NEURAL_INTERFACE_USER_MATCH_RESOLVE] Error querying telegram_users:", err);
+        }
+      }
+    }
+
     // Identify current channel receiver
     const platformTag = `${chatType.toLowerCase()}:${senderName}`;
     let receiverIdentity = allIdentities.find((id: any) => 
-      id.linkedAccounts.includes(platformTag) || id.perceivedName === senderName
+      (pairedIdentityId && id.id === pairedIdentityId) ||
+      (id.linkedAccounts && id.linkedAccounts.some((acc: string) => acc.toLowerCase() === platformTag.toLowerCase())) || 
+      (id.perceivedName && id.perceivedName.toLowerCase() === senderName.toLowerCase())
     );
 
     if (!receiverIdentity) {
@@ -163,6 +182,31 @@ export class NeuralInterface {
       allIdentities.push(receiverIdentity);
     } else {
       this.db.prepare("UPDATE identities SET lastInteraction = ? WHERE id = ?").run(Date.now(), receiverIdentity.id);
+    }
+
+    // On-the-fly deduplication alignment and self-healing merge (resolves any case splits/duplications gracefully)
+    try {
+      const { deduplicateAndMergeIdentities } = await import("../database.js");
+      deduplicateAndMergeIdentities(this.db, receiverIdentity.id);
+      
+      // Reload receiver identity to pick up any merged facts/stats/habits/linkedAccounts
+      const refreshed = this.db.prepare("SELECT * FROM identities WHERE id = ?").get(receiverIdentity.id) as any;
+      if (refreshed) {
+        receiverIdentity = {
+          ...receiverIdentity,
+          perceivedName: refreshed.perceivedName,
+          realName: refreshed.realName,
+          habits: refreshed.habits ? JSON.parse(refreshed.habits) : [],
+          importantFacts: refreshed.importantFacts ? JSON.parse(refreshed.importantFacts) : [],
+          linkedAccounts: refreshed.linkedAccounts ? JSON.parse(refreshed.linkedAccounts) : [],
+          lastMet: refreshed.lastMet || refreshed.lastInteraction || Date.now(),
+          trust: refreshed.trust !== undefined ? refreshed.trust : receiverIdentity.trust,
+          affection: refreshed.affection !== undefined ? refreshed.affection : receiverIdentity.affection,
+          reputation: refreshed.reputation !== undefined ? refreshed.reputation : receiverIdentity.reputation
+        };
+      }
+    } catch (mergeErr: any) {
+      console.warn("[NEURAL_INTERFACE_MERGE] Self-healing merge warn:", mergeErr.message);
     }
 
     const { DEFAULT_NEURAL_CORES } = await import("../../constants.js");
